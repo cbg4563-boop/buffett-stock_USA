@@ -1,3 +1,15 @@
+import streamlit as st
+import pandas as pd
+import yfinance as yf
+import FinanceDataReader as fdr
+
+# --- 페이지 설정 ---
+st.set_page_config(
+    page_title="워렌 버핏의 미국 주식 채점표 (US Edition)",
+    page_icon="🗽",
+    layout="wide"
+)
+
 # --- 스타일 (커스텀 CSS) ---
 st.markdown("""
 <style>
