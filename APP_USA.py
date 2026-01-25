@@ -7,8 +7,8 @@ st.title("🗽 워렌 버핏의 미국 주식 채점표 (US Edition)")
 # 이 부분이 검색 봇이 긁어가는 핵심 텍스트가 됩니다.
 st.markdown("""
 ### 💡 이 사이트는 무엇인가요?
-**워렌 버핏(Warren Buffett)**의 투자 철학을 기반으로 **미국 주식(S&P 500, 나스닥)**의 적정 주가를 분석해주는 계산기입니다.
-애플(AAPL), 테슬라(TSLA), 엔비디아(NVDA) 등 전 종목의 **PER, ROE, PBR**을 실시간으로 진단하여 매수/매도 타이밍을 점수로 알려드립니다.
+워렌 버핏(Warren Buffett)의 투자 철학을 기반으로 미국 주식(S&P 500, 나스닥)의 적정 주가를 분석해주는 계산기입니다.
+애플(AAPL), 테슬라(TSLA), 엔비디아(NVDA) 등 전 종목의 PER, ROE, PBR을 실시간으로 진단하여 매수/매도 타이밍을 점수로 알려드립니다.
 """)
 
 # --- 페이지 설정 ---
@@ -222,5 +222,6 @@ with tab3:
                 st.dataframe(df_res, use_container_width=True)
         else:
             st.error("데이터 로딩 실패")
+
 
 
