@@ -5,7 +5,7 @@ import FinanceDataReader as fdr
 
 # --- 페이지 설정 ---
 st.set_page_config(
-    page_title="천조국 버핏 채점표 (US Edition)",
+    page_title="천조국 버핏식 계산기 (US Edition)",
     page_icon="🗽",
     layout="wide"
 )
@@ -112,7 +112,7 @@ def calculate_us_score(data):
 # 3. 🖥️ 메인 화면
 # ---------------------------------------------------------
 
-st.title("🗽 천조국 주식 채점표 (US Stocks)")
+st.title("🗽 미국주식 워렌버핏식 계산기 (US Stocks)")
 st.caption("Data: Yahoo Finance | 기준: US Market Standard")
 
 st.warning("⚠️ **[면책 조항]** 본 서비스는 투자 참고용이며, 데이터 오류가 있을 수 있습니다. 모든 투자의 책임은 본인에게 있습니다.")
@@ -120,11 +120,11 @@ st.warning("⚠️ **[면책 조항]** 본 서비스는 투자 참고용이며, 
 sp500_df = get_sp500_list()
 korean_map = get_korean_name_map()
 
-tab1, tab2, tab3 = st.tabs(["🔍 종목 검색", "🏆 S&P 500 리스트", "🚀 대장주 Top 5"])
+tab1, tab2, tab3 = st.tabs(["🔍 종목 진단", "🏆 S&P 500 리스트", "🚀 저평가 기업 Top 5"])
 
 # --- 탭 1: 검색 ---
 with tab1:
-    st.subheader("종목 정밀 진단")
+    st.subheader("종목 진단")
     st.write("티커(AAPL) 또는 한글 별명(애플, 슈드, 반도체 등)으로 검색하세요.")
     
     search_input = st.text_input("종목 입력", placeholder="예: TSLA, 엔비디아, 코카콜라").upper()
@@ -176,7 +176,7 @@ with tab1:
 
 # --- 탭 2: 리스트 ---
 with tab2:
-    st.subheader("S&P 500 종목 리스트")
+    st.subheader("저평가 기업 리스트")
     if sp500_df is not None:
         st.dataframe(sp500_df[['Symbol', 'Name', 'Sector']], use_container_width=True)
     else:
@@ -184,7 +184,7 @@ with tab2:
 
 # --- 탭 3: 스캔 ---
 with tab3:
-    st.subheader("🇺🇸 S&P 500 대장주 Top 5 발굴")
+    st.subheader("🇺🇸 저평가 기업 Top 5 발굴")
     if st.button("🚀 스캔 시작"):
         if sp500_df is not None:
             targets = sp500_df['Symbol'].head(20).tolist()
@@ -208,3 +208,4 @@ with tab3:
                 st.dataframe(df_res, use_container_width=True)
         else:
             st.error("데이터 로딩 실패")
+
