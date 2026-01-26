@@ -374,8 +374,8 @@ with st.sidebar:
         # GitHub에 'kakao_qr.png' 파일이 없으면 에러가 납니다.
         # 파일이 있는지 확인하는 안전장치 추가
         import os
-        if os.path.exists("kakao_qr.png"):
-            st.image("kakao_qr.png", caption="카메라 스캔 → 바로 송금", use_container_width=True)
+        if os.path.exists("kakao_qr.png.jpg"):
+            st.image("kakao_qr.png.jpg", caption="카메라 스캔 → 바로 송금", use_container_width=True)
             st.caption("예금주: 최주환") 
         else:
             st.error("QR 이미지가 없습니다. GitHub에 업로드해주세요.")
@@ -385,4 +385,5 @@ with st.sidebar:
     # 2. 쿠팡 파트너스 (책 추천)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
