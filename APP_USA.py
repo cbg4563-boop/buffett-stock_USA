@@ -365,7 +365,14 @@ with st.sidebar:
     st.write(" ") 
     st.markdown("---")
 
+    with tab_kakao:
+        # 깃허브에 올린 QR코드 이미지 표시
+        # (이미지 파일명이 kakao_qr.png 라고 가정)
+        st.image("kakao_qr.png", caption="카메라로 스캔하면 바로 송금됩니다!", use_container_width=True)
+        st.caption("예금주: 최JH") # 사장님 성함으로 수정
+
     # 2. 쿠팡 파트너스 (책 추천) - 기존 코드 살리기
     st.info("📚 **워렌 버핏의 인생 책**")
     st.markdown("[👉 **'현명한 투자자' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
