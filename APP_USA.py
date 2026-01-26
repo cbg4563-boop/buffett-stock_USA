@@ -376,7 +376,7 @@ with st.sidebar:
         import os
         if os.path.exists("kakao_qr.png.jpg"):
             st.image("kakao_qr.png.jpg", caption="카메라 스캔 → 바로 송금", use_container_width=True)
-            st.caption("예금주: 최주환") 
+            st.caption("예금주: 최*환") 
         else:
             st.error("QR 이미지가 없습니다. GitHub에 업로드해주세요.")
 
@@ -385,5 +385,6 @@ with st.sidebar:
     # 2. 쿠팡 파트너스 (책 추천)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
 
