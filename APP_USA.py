@@ -347,10 +347,25 @@ with tab3:
 # 수익화 배너 (사이드바)
 with st.sidebar:
     st.markdown("---")
-    st.header("💸 후원 및 추천")
-    st.success("📢 **토스증권 계좌 개설 이벤트**")
-    st.markdown("[👉 **주식 무료로 받으러 가기**](https://tossinvest.com/)") 
+    
+    # 1. Buy Me a Coffee (개발자 후원 페이지 연결)
+    st.header("☕ 개발자 후원")
+    st.caption("서버비 유지에 큰 힘이 됩니다! 🙇‍♂️")
+    
+    # ▼ 아까 복사한 '예쁜 프로필 주소'를 따옴표 안에 붙여넣으세요!
+    # 예: "https://buymeacoffee.com/jh.choi"
+    my_coffee_link = "https://buymeacoffee.com/jh.choi" 
+    
+    st.markdown(f"""
+    <a href="{my_coffee_link}" target="_blank">
+        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 160px !important;" >
+    </a>
+    """, unsafe_allow_html=True)
+    
     st.write(" ") 
+    st.markdown("---")
+
+    # 2. 쿠팡 파트너스 (책 추천) - 기존 코드 살리기
     st.info("📚 **워렌 버핏의 인생 책**")
     st.markdown("[👉 **'현명한 투자자' 최저가**](https://link.coupang.com/a/dz5HhD)")
 
