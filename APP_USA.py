@@ -344,28 +344,45 @@ with tab3:
         else:
             st.error("데이터 로딩 실패")
 
-# 수익화 배너 (사이드바)
+# =========================================================
+# 💸 [수익화 파트] 사이드바 (최종_진짜_완성.ver)
+# =========================================================
 with st.sidebar:
     st.markdown("---")
     
-    # 1. Buy Me a Coffee (개발자 후원 페이지 연결)
+    # 1. 개발자 후원 (탭으로 분리: 카드 vs 카카오)
     st.header("☕ 개발자 후원")
     st.caption("서버비 유지에 큰 힘이 됩니다! 🙇‍♂️")
     
-    # ▼ 아까 만든 '예쁜 후원 페이지' 주소 (수정완료)
-    my_coffee_link = "https://buymeacoffee.com/cbg4563t" 
+    # 탭 만들기 (여기서 에러 안 나게 수정함)
+    tab_card, tab_kakao = st.tabs(["💳 카드/페이", "🟡 카카오송금"])
     
-    st.markdown(f"""
-    <a href="{my_coffee_link}" target="_blank">
-        <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 160px !important;" >
-    </a>
-    """, unsafe_allow_html=True)
-    
-    st.write(" ") 
+    # [탭 1] Buy Me a Coffee (카드/페이팔)
+    with tab_card:
+        st.write(" ")
+        my_coffee_link = "https://buymeacoffee.com/cbg4563t" 
+        st.markdown(f"""
+        <a href="{my_coffee_link}" target="_blank">
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 100% !important;" >
+        </a>
+        """, unsafe_allow_html=True)
+        st.caption("해외 결제 / 간편 후원")
+
+    # [탭 2] 카카오페이 QR (송금)
+    with tab_kakao:
+        st.write(" ")
+        # GitHub에 'kakao_qr.png' 파일이 없으면 에러가 납니다.
+        # 파일이 있는지 확인하는 안전장치 추가
+        import os
+        if os.path.exists("kakao_qr.png"):
+            st.image("kakao_qr.png", caption="카메라 스캔 → 바로 송금", use_container_width=True)
+            st.caption("예금주: 최주환") 
+        else:
+            st.error("QR 이미지가 없습니다. GitHub에 업로드해주세요.")
+
     st.markdown("---")
 
     # 2. 쿠팡 파트너스 (책 추천)
-    st.info("📚 **워렌 버핏의 인생 책**")
-    # ▼ 사장님 쿠팡 링크 (수정완료)
-    st.markdown("[👉 **'워런 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+    st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
+    st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
 
