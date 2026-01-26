@@ -352,4 +352,5 @@ with st.sidebar:
     st.markdown("[👉 **주식 무료로 받으러 가기**](https://tossinvest.com/)") 
     st.write(" ") 
     st.info("📚 **워렌 버핏의 인생 책**")
-    st.markdown("[👉 **'현명한 투자자' 최저가**](https://www.coupang.com)")
+    st.markdown("[👉 **'현명한 투자자' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
