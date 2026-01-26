@@ -5,13 +5,17 @@ import FinanceDataReader as fdr
 import time
 
 # =========================================================
-# 1. 페이지 설정
+# 1. 페이지 설정 및 세션 상태 초기화
 # =========================================================
 st.set_page_config(
     page_title="워렌 버핏의 미국 주식 계산기",
     page_icon="🗽",
     layout="wide"
 )
+
+# [핵심] 다른 탭에서 종목을 클릭했을 때, 검색창에 자동 입력하기 위한 변수 설정
+if 'target_ticker' not in st.session_state:
+    st.session_state['target_ticker'] = ""
 
 st.markdown("""
 <style>
@@ -24,20 +28,40 @@ st.markdown("""
     div[data-testid="stMetric"] label { color: #666666 !important; }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #000000 !important; }
     button[data-baseweb="tab"] { font-size: 16px; font-weight: 700; }
+    
+    /* 랭킹 리스트의 버튼 스타일 */
+    div.stButton > button:first-child {
+        width: 100%;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. 데이터 처리 & 검색 로직
+# 2. 데이터 처리 & 번역 & 검색 로직
 # =========================================================
 @st.cache_data(ttl=86400)
 def get_sp500_data():
     try:
-        # S&P 500 리스트 (섹터 정보 포함)
         df = fdr.StockListing('S&P500')
         return df
     except:
         return None
+
+# [핵심] 업종 한글 번역 맵핑
+def get_sector_map():
+    return {
+        'Energy': '에너지',
+        'Materials': '소재/화학',
+        'Industrials': '산업재 (기계/항공)',
+        'Consumer Discretionary': '경기소비재 (자동차/유통)',
+        'Consumer Staples': '필수소비재 (음식료/생필품)',
+        'Health Care': '헬스케어 (제약/바이오)',
+        'Financials': '금융 (은행/보험)',
+        'Information Technology': 'IT/기술 (반도체/SW)',
+        'Communication Services': '통신서비스 (미디어/인터넷)',
+        'Utilities': '유틸리티 (전력/가스)',
+        'Real Estate': '부동산 (리츠)'
+    }
 
 @st.cache_data(ttl=86400)
 def get_korean_name_map():
@@ -81,7 +105,7 @@ def get_stock_info(ticker):
             'PBR': round(info.get('priceToBook', 0), 2) if info.get('priceToBook') else 0,
             'DIV': round(info.get('dividendYield', 0) * 100, 2) if info.get('dividendYield') else 0,
             'Name': info.get('shortName', ticker),
-            'MarketCap': info.get('marketCap', 0) # 시총 정보 추가
+            'MarketCap': info.get('marketCap', 0)
         }
         history = stock.history(period="1y")
         return data, history
@@ -89,7 +113,7 @@ def get_stock_info(ticker):
         return None, None
 
 # =========================================================
-# 3. 채점 로직 (버핏 공식)
+# 3. 채점 로직
 # =========================================================
 def calculate_us_score(data):
     score = 0
@@ -126,19 +150,32 @@ st.markdown("### 💡 복잡한 분석은 끝! 종목만 넣으면 점수가 나
 st.warning("⚠️ 투자 참고용이며, 모든 책임은 본인에게 있습니다.")
 
 sp500_df = get_sp500_data()
+sector_map = get_sector_map()
 
 tab1, tab2, tab3 = st.tabs(["🔍 종목 진단", "📋 S&P 500 리스트", "💎 업종별 보물찾기"])
 
-# --- [탭 1] 종목 진단 ---
+# --- [탭 1] 종목 진단 (자동 실행 기능 추가) ---
 with tab1:
+    # 세션 상태에 저장된 종목이 있으면 그걸 기본값으로 사용
+    default_ticker = st.session_state.get('target_ticker', '')
+    
     with st.form(key='search_form'):
         c1, c2 = st.columns([4, 1])
-        with c1: input_text = st.text_input("종목 검색", placeholder="예: Apple, 테슬라, KO", label_visibility="collapsed")
-        with c2: search_btn = st.form_submit_button("🔍 계산")
+        with c1:
+            input_text = st.text_input("종목 검색", value=default_ticker, placeholder="예: Apple, 테슬라", label_visibility="collapsed")
+        with c2:
+            search_btn = st.form_submit_button("🔍 계산")
 
-    if search_btn and input_text:
+    # 버튼을 누르거나, 다른 탭에서 종목을 보내왔을 때(default_ticker가 있을 때) 실행
+    if (search_btn and input_text) or (default_ticker and input_text):
         ticker = find_ticker(input_text, sp500_df)
-        with st.spinner(f"🇺🇸 '{ticker}' 분석 중..."):
+        
+        # 중복 실행 방지 및 사용자 알림
+        if default_ticker:
+            st.info(f"🚀 '{default_ticker}' 종목을 자동으로 불러왔습니다.")
+            st.session_state['target_ticker'] = "" # 한번 썼으면 초기화 (새로고침 시 무한루프 방지)
+
+        with st.spinner(f"🇺🇸 '{ticker}' 정밀 분석 중..."):
             data, history = get_stock_info(ticker)
             
         if data:
@@ -174,28 +211,32 @@ with tab1:
 with tab2:
     st.subheader("S&P 500 종목 리스트")
     if sp500_df is not None:
-        st.dataframe(sp500_df[['Symbol', 'Name', 'Sector']], use_container_width=True, hide_index=True)
+        # 데이터프레임 보여줄 때도 한글 업종명 추가해서 보여주기
+        show_df = sp500_df[['Symbol', 'Name', 'Sector']].copy()
+        show_df['Sector_KR'] = show_df['Sector'].map(sector_map).fillna(show_df['Sector'])
+        st.dataframe(show_df, use_container_width=True, hide_index=True)
 
-# --- [탭 3] 업종별 보물찾기 (핵심 기능 변경) ---
+# --- [탭 3] 업종별 보물찾기 (한글 표시 + 클릭 시 이동) ---
 with tab3:
     st.subheader("💎 숨겨진 '100점' 주식 찾기")
-    st.markdown("""
-    시가총액 순위가 아닙니다. **실시간으로 계산기를 돌려 '점수가 높은 순서'대로 보여줍니다.**
-    S&P 500 전 종목을 대상으로 하되, 속도를 위해 **업종(Sector)**을 선택해주세요.
-    """)
+    st.markdown("원하는 업종을 고르면, 계산기가 실시간으로 채점하여 **1등**을 찾아줍니다.")
     
     if sp500_df is not None:
-        # 섹터 선택 상자
-        sectors = sorted(sp500_df['Sector'].unique())
-        selected_sector = st.selectbox("탐색할 업종을 선택하세요:", sectors)
+        # [핵심] 1. 한글이 포함된 업종 리스트 만들기
+        sectors_raw = sorted(sp500_df['Sector'].unique())
+        # "Energy (에너지)" 형태로 변환
+        sector_options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors_raw]
         
-        if st.button(f"🚀 '{selected_sector}' 분야 채점 시작"):
-            # 해당 섹터 종목만 필터링
-            targets = sp500_df[sp500_df['Sector'] == selected_sector]
+        selected_option = st.selectbox("탐색할 업종을 선택하세요:", sector_options)
+        
+        # "Energy (에너지)" -> "Energy"만 추출해서 검색에 사용
+        real_sector = selected_option.split(' (')[0]
+        
+        if st.button(f"🚀 '{real_sector}' 분야 채점 시작"):
+            targets = sp500_df[sp500_df['Sector'] == real_sector]
             
-            # 너무 많으면 50개로 제한 (서버 보호)
             if len(targets) > 50:
-                st.info(f"💡 종목이 많아 상위 50개만 우선 분석합니다. (총 {len(targets)}개)")
+                st.info(f"💡 종목이 많아 시가총액 상위 50개만 우선 분석합니다. (총 {len(targets)}개)")
                 targets = targets.head(50)
             
             results = []
@@ -205,45 +246,65 @@ with tab3:
             total = len(targets)
             for i, row in enumerate(targets.itertuples()):
                 ticker = row.Symbol
-                name = row.Name
-                
-                # 실시간 데이터 가져오기
                 d, _ = get_stock_info(ticker)
                 
                 if d:
-                    s, _, m_text, m_rate = calculate_us_score(d)
+                    s, _, m_text, _ = calculate_us_score(d)
                     results.append({
-                        '종목명': name,
                         '티커': ticker,
-                        '점수': s,       # 핵심: 점수
+                        '종목명': d['Name'],
+                        '점수': s,
                         '현재가': f"${d['Price']:,.2f}",
                         '안전마진': m_text,
-                        'ROE': f"{d['ROE']}%",
-                        'PER': d['PER']
+                        'ROE': f"{d['ROE']}%"
                     })
                 
-                # 진행상황 업데이트
-                progress = (i + 1) / total
-                progress_bar.progress(progress)
+                progress_bar.progress((i + 1) / total)
                 status_text.text(f"🔍 {ticker} 채점 중... ({i+1}/{total})")
             
             progress_bar.empty()
             status_text.empty()
             
             if results:
-                # [핵심] 점수(s) 높은 순서로 정렬!!!
+                # 점수순 정렬
                 df_res = pd.DataFrame(results).sort_values(by='점수', ascending=False)
-                df_res.index = range(1, len(df_res) + 1) # 1위부터 순위 매기기
                 
-                # 1등 강조
-                top_stock = df_res.iloc[0]
                 st.balloons()
-                st.success(f"🏆 **1위 발견!** : {top_stock['종목명']} ({top_stock['점수']}점)")
+                st.success(f"✅ 분석 완료! **'{real_sector}'** 분야 순위입니다.")
                 
-                st.markdown("### 📊 채점 결과 랭킹 (Top 10)")
-                st.dataframe(df_res.head(10), use_container_width=True)
+                # [핵심] 2. 결과를 단순 표가 아니라 '버튼이 있는 리스트'로 출력
+                st.markdown("### 📊 랭킹 Top 10 (버튼을 누르면 상세 진단)")
+                
+                # 헤더 출력
+                h1, h2, h3, h4, h5 = st.columns([1, 2, 2, 2, 2])
+                h1.markdown("**순위**")
+                h2.markdown("**종목**")
+                h3.markdown("**점수**")
+                h4.markdown("**현재가**")
+                h5.markdown("**상세보기**")
+                st.markdown("---")
+
+                # 상위 10개만 루프 돌며 출력
+                for idx, row in enumerate(df_res.head(10).to_dict('records')):
+                    c1, c2, c3, c4, c5 = st.columns([1, 2, 2, 2, 2])
+                    
+                    with c1: st.write(f"**{idx+1}위**")
+                    with c2: st.write(f"**{row['티커']}**")
+                    with c3: 
+                        if row['점수'] >= 80: st.success(f"{row['점수']}점")
+                        elif row['점수'] >= 60: st.info(f"{row['점수']}점")
+                        else: st.write(f"{row['점수']}점")
+                    with c4: st.write(row['현재가'])
+                    
+                    # [핵심] 3. 상세보기 버튼 구현
+                    with c5:
+                        if st.button(f"🔍 진단하기", key=f"btn_{row['티커']}"):
+                            # 버튼 누르면 세션 상태에 저장하고 앱 리로드
+                            st.session_state['target_ticker'] = row['티커']
+                            st.rerun() 
+                            # 리로드되면 -> Tab 1 코드가 실행되면서 -> target_ticker를 감지하고 -> 자동 분석 시작
             else:
-                st.error("데이터를 가져오지 못했습니다.")
+                st.error("데이터 로딩 실패")
 
 # =========================================================
 # 5. 수익화 사이드바
@@ -273,7 +334,10 @@ with st.sidebar:
         else:
             st.warning("QR 이미지가 없습니다.")
 
+    st.markdown("---")
+
     # 2. 쿠팡 파트너스 (책 추천)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
         
+
