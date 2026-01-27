@@ -154,9 +154,18 @@ if choice == "🔍 종목 진단":
             else:
                 st.error("데이터 수집 실패. 잠시 후 다시 시도하세요. (야후 서버 지연)")
 
-# --- [3] 분야별 TOP 5 (표 형태 출력) ---
+# --- [3] 분야별 TOP 5 (버튼 삭제 + 표 출력 전용) ---
 elif choice == "🏆 분야별 워렌 버핏 점수 TOP 5 랭킹":
     st.subheader("🏆 분야별 워렌 버핏 점수 TOP 5")
+    
+    with st.expander("ℹ️ 항목 가이드 (무엇을 보나요?)"):
+        st.write("""
+        * **티커**: 미국 주식 고유 식별 코드
+        * **점수**: 버핏식 가치투자 기준 점수 (100점 만점)
+        * **현재가**: 1주당 현재 주가 (달러 기준)
+        * **안전마진**: 목표가 대비 현재 상승 여력
+        """)
+
     if sp500_df is not None:
         sectors = sorted(sp500_df['Sector'].unique())
         options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors]
@@ -170,27 +179,26 @@ elif choice == "🏆 분야별 워렌 버핏 점수 TOP 5 랭킹":
             status = st.empty()
             
             for i, row in enumerate(targets.itertuples()):
-                status.text(f"🔍 {row.Symbol} 채점 중... ({i+1}/{len(targets)})")
-                time.sleep(0.5) # [해결] 야후 차단 방지
+                status.text(f"🔍 {row.Symbol} 분석 중... ({i+1}/{len(targets)})")
+                time.sleep(0.5) 
+                
                 d, _ = get_stock_info(row.Symbol)
                 if d:
-                    s = 0
-                    if d['ROE'] >= 15: s += 50
-                    if 0 < d['PBR'] <= 2.0: s += 30
-                    if 0 < d['PER'] <= 20: s += 20
-                    m_t = f"{((d['TargetPrice']-d['Price'])/d['Price']*100):.1f}%" if d['TargetPrice']>0 else "-"
-                    results.append({'순위': 0, '티커': row.Symbol, '종목명': d['Name'], '점수': s, '안전마진': m_t, '현재가': f"${d['Price']}"})
+                    s, m_t, _ = calculate_score(d)
+                    results.append({'티커': row.Symbol, '종목명': d['Name'], '점수': s, '안전마진': m_t, '현재가': f"${d['Price']}", 'ROE': f"{d['ROE']}%"})
                 bar.progress((i+1)/len(targets))
             
             status.empty()
+            
             if results:
-                # [해결] 점수 순 표 출력
+                # [해결] 점수 순으로 정렬하여 표만 출력 (진단 버튼 코드 완전 삭제)
                 final_df = pd.DataFrame(results).sort_values('점수', ascending=False).head(5)
                 final_df['순위'] = range(1, len(final_df) + 1)
-                st.success("✅ 분석 완료!")
-                st.table(final_df.set_index('순위'))
                 
-            else: st.error("데이터 수집 실패. 잠시 후 다시 시도하세요.")
+                st.success(f"✅ {pure_sector} 분야 분석 완료!")
+                st.table(final_df.set_index('순위')) # 깔끔한 표만 노출
+            else:
+                st.error("데이터 수집 실패. 잠시 후 다시 시도하세요.")
 
 elif choice == "📋 S&P 500 리스트":
     if sp500_df is not None:
@@ -214,4 +222,5 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
