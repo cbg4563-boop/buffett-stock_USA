@@ -155,7 +155,7 @@ if choice == "🔍 종목 진단":
                 st.error("데이터 수집 실패. 잠시 후 다시 시도하세요. (야후 서버 지연)")
 
 # --- [3] 분야별 TOP 5 (표 형태 출력) ---
-elif choice == "🏆 분야별 TOP 5 랭킹":
+elif choice == "🏆 분야별 워렌 버핏 점수 TOP 5 랭킹":
     st.subheader("🏆 분야별 워렌 버핏 점수 TOP 5")
     if sp500_df is not None:
         sectors = sorted(sp500_df['Sector'].unique())
@@ -221,4 +221,5 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
