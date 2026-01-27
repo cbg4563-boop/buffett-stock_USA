@@ -131,7 +131,7 @@ def calculate_score(data):
 # =========================================================
 st.title("🗽 워렌 버핏 주식매매 기준 계산기")
 st.markdown("### 💡 복잡한 분석은 끝! 종목만 넣으면 점수가 나옵니다.")
-st.markdown("# 💡 S&P500에 있는 기업들만 검색 가능해요")
+st.markdown("#### 💡 S&P500에 있는 기업들만 검색 가능해요")
 st.warning("⚠️ 투자 참고용이며, 모든 책임은 본인에게 있습니다.")
 
 try:
@@ -271,4 +271,5 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 투자법 완벽 가이드**")
     st.markdown("[👉 **'워렌 버핏 바이블' 최저가 보기**](https://link.coupang.com/a/dz5HhD)")
+
 
