@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import FinanceDataReader as fdr
-import os    # NameError 방지
-import time  # 야후 차단 방지
+import os    # NameError 방지용
+import time  # 야후 차단 방지용
 
 # =========================================================
-# 1. 페이지 설정 및 강제 내비게이션 상태 초기화
+# 1. 페이지 설정 및 내비게이션 상태 초기화
 # =========================================================
 st.set_page_config(
     page_title="워렌 버핏의 미국 주식 계산기",
@@ -14,24 +14,31 @@ st.set_page_config(
     layout="wide"
 )
 
-# [핵심] 탭 이동과 검색어를 제어하기 위한 세션 상태 세팅
-if 'active_menu' not in st.session_state:
-    st.session_state['active_menu'] = "🔍 종목 진단"
+# [핵심] 탭 이동과 검색어를 제어하기 위한 세션 상태 설정
+if 'nav_choice' not in st.session_state:
+    st.session_state['nav_choice'] = "🔍 종목 진단"
 if 'target_ticker' not in st.session_state:
     st.session_state['target_ticker'] = ""
 
-# 스타일 (라디오 버튼을 탭처럼 보이게 디자인)
+# 스타일 설정
 st.markdown("""
 <style>
     div[data-testid="stMetric"] { background-color: #ffffff !important; border: 1px solid #e6e6e6; padding: 15px; border-radius: 10px; }
+    div[data-testid="stMetric"] label { color: #666666 !important; }
+    div[data-testid="stMetricValue"] { color: #000000 !important; }
+    
+    /* 메뉴 라디오 버튼을 탭처럼 보이게 디자인 */
     div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlock"] > div:has(input[type="radio"]) {
-        background-color: #f8f9fb; padding: 15px; border-radius: 15px; border: 1px solid #dee2e6;
+        background-color: #f8f9fb;
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid #dee2e6;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. 필수 데이터 수집 로직
+# 2. 필수 데이터 및 로직 (동일)
 # =========================================================
 @st.cache_data(ttl=86400)
 def get_sp500_data():
@@ -78,30 +85,30 @@ def calculate_us_score(data):
     report = []
     roe, per, pbr, div = data['ROE'], data['PER'], data['PBR'], data['DIV']
     if roe >= 15: score += 50; report.append("✅ [수익성] ROE 15% 이상 (매우 높음)")
-    if 0 < pbr <= 2.0: score += 20; report.append("✅ [자산] PBR 2배 이하 (자산 가치 대비 저평가)")
-    if 0 < per <= 20: score += 20; report.append("✅ [밸류] PER 20배 이하 (수익 대비 저평가)")
+    if 0 < pbr <= 2.0: score += 20; report.append("✅ [자산] PBR 2배 이하 (저평가)")
+    if 0 < per <= 20: score += 20; report.append("✅ [밸류] PER 20배 이하 (적정)")
     if div >= 1.0: score += 10; report.append("✅ [배당] 배당 수익률 1% 이상")
     m_rate = ((data['TargetPrice'] - data['Price']) / data['Price'] * 100) if data['TargetPrice'] > 0 else 0
     return score, report, f"{m_rate:.1f}%", m_rate
 
 # =========================================================
-# 3. 메인 내비게이션 (라디오 버튼 방식의 탭)
+# 3. 메인 내비게이션 (st.tabs 대신 라디오 버튼 사용)
 # =========================================================
 st.title("🗽 워렌 버핏의 미국 주식 계산기")
 
-# [핵심] 기존 st.tabs 대신 Radio 메뉴를 사용하여 코드로 이동 가능하게 함
+# [핵심] 메뉴 이동을 코드로 제어하기 위해 Radio 버튼을 탭처럼 사용합니다.
 menu_list = ["🔍 종목 진단", "📋 S&P 500 리스트", "💎 업종별 보물찾기"]
-choice = st.radio("메뉴 선택", menu_list, index=menu_list.index(st.session_state['active_menu']), horizontal=True, label_visibility="collapsed")
-st.session_state['active_menu'] = choice # 현재 메뉴 상태 저장
+current_menu = st.radio("메뉴", menu_list, index=menu_list.index(st.session_state['nav_choice']), horizontal=True, label_visibility="collapsed")
+st.session_state['nav_choice'] = current_menu # 현재 선택 저장
 
 st.markdown("---")
 
 # =========================================================
-# 4. 기능별 페이지 구성
+# 4. 각 메뉴별 페이지 구성
 # =========================================================
 
-# --- [1] 종목 진단 페이지 ---
-if choice == "🔍 종목 진단":
+# --- [메뉴 1] 종목 진단 (자동 분석 기능 포함) ---
+if current_menu == "🔍 종목 진단":
     # 랭킹에서 진단하기 버튼을 누르고 넘어온 경우 티커가 세션에 들어있음
     auto_query = st.session_state['target_ticker']
     
@@ -112,9 +119,9 @@ if choice == "🔍 종목 진단":
         with c2:
             search_btn = st.form_submit_button("🔍 계산하기")
 
-    # 버튼을 눌렀거나, 보물찾기에서 넘어온 경우 자동 실행
+    # 버튼을 눌렀거나, 보물찾기에서 '진단' 버튼을 누르고 넘어온 경우 즉시 실행
     if (search_btn and input_text) or (auto_query and input_text):
-        if auto_query: st.session_state['target_ticker'] = "" # 사용 후 초기화
+        if auto_query: st.session_state['target_ticker'] = "" # 사용 후 세션 비우기
         
         ticker = find_ticker(input_text, get_sp500_data())
         with st.spinner(f"🇺🇸 {ticker} 데이터 분석 중..."):
@@ -131,32 +138,32 @@ if choice == "🔍 종목 진단":
                     st.subheader(f"{data['Name']} ({ticker})")
                     m1, m2, m3, m4 = st.columns(4)
                     m1.metric("현재가", f"${data['Price']}")
-                    m2.metric("ROE (수익성)", f"{data['ROE']}%")
-                    m3.metric("PER (저평가도)", f"{data['PER']}배")
-                    m4.metric("PBR (자산가치)", f"{data['PBR']}배")
+                    m2.metric("ROE", f"{data['ROE']}%")
+                    m3.metric("PER", f"{data['PER']}배")
+                    m4.metric("PBR", f"{data['PBR']}배")
                 st.line_chart(history['Close'], color="#004e92")
                 for r in report: st.write(r)
             else:
                 st.error("종목 정보를 찾을 수 없습니다.")
 
-# --- [2] S&P 500 리스트 ---
-elif choice == "📋 S&P 500 리스트":
+# --- [메뉴 2] 리스트 ---
+elif current_menu == "📋 S&P 500 리스트":
     st.subheader("📋 S&P 500 종목 현황")
     df = get_sp500_data()
     if df is not None:
         st.dataframe(df[['Symbol', 'Name', 'Sector']], use_container_width=True, hide_index=True)
 
-# --- [3] 보물찾기 (강제 이동 버튼 탑재) ---
-elif choice == "💎 업종별 보물찾기":
+# --- [메뉴 3] 업종별 보물찾기 (강제 이동 버튼 구현) ---
+elif current_menu == "💎 업종별 보물찾기":
     st.subheader("💎 업종별 저평가 우량주 발굴")
     
-    # [설명 추가] 열 이름이 무엇을 의미하는지 가이드를 추가함
-    with st.expander("ℹ️ 표 항목 상세 설명 (무엇을 보나요?)"):
+    # [설명 추가] 열 이름이 무엇을 의미하는지 가이드 추가
+    with st.expander("ℹ️ 표 항목 상세 설명 (어떤 데이터인가요?)"):
         st.write("""
-        * **티커**: 미국 시장 종목 코드 (예: AAPL)
-        * **점수**: ROE, PER, PBR 등을 종합한 워렌 버핏식 투자 점수 (100점 만점)
-        * **현재가**: 실시간 기준 1주당 주가 (USD)
-        * **안전마진**: 목표 주가 대비 현재 주가가 얼마나 낮은지 나타내는 상승 여력
+        * **티커**: 미국 주식 고유 코드 (예: AAPL은 애플)
+        * **점수**: 버핏식 가치투자 기준 점수 (100점 만점)
+        * **현재가**: 1주당 현재 주가 (달러 기준)
+        * **안전마진**: 전문가 목표주가 대비 현재 상승 여력 (%가 클수록 저평가)
         """)
 
     df = get_sp500_data()
@@ -165,10 +172,10 @@ elif choice == "💎 업종별 보물찾기":
         sectors = sorted(df['Sector'].unique())
         sector_options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors]
         selected_sector = st.selectbox("업종 선택", sector_options)
-        pure_name = selected_sector.split(' (')[0]
+        pure_sector = selected_sector.split(' (')[0]
         
-        if st.button(f"🚀 {pure_name} 분석 시작"):
-            targets = df[df['Sector'] == pure_name].head(25)
+        if st.button(f"🚀 {pure_sector} 분석 시작"):
+            targets = df[df['Sector'] == pure_sector].head(25)
             results = []
             bar = st.progress(0)
             for i, row in enumerate(targets.itertuples()):
@@ -183,22 +190,23 @@ elif choice == "💎 업종별 보물찾기":
                 df_res = pd.DataFrame(results).sort_values('점수', ascending=False)
                 st.success(f"✅ 분석 완료! 순위별 종목입니다.")
                 
-                # 리스트 형태의 랭킹 출력
+                # [핵심] 리스트 형태의 랭킹과 강제 이동 버튼 구현
                 for row in df_res.head(10).to_dict('records'):
                     with st.container():
                         c1, c2, c3, c4 = st.columns([1, 3, 2, 2])
                         c1.write(f"**{row['티커']}**")
                         c2.write(row['종목명'])
                         c3.write(f"**{row['점수']}점**")
-                        # [핵심] 진단하기 클릭 시 세션 상태 변경 후 앱 리런
+                        
+                        # [버그 수정] 버튼 클릭 시 세션 상태 변경 후 즉시 리런(rerun) 시킴
                         if c4.button(f"🔍 진단", key=f"btn_jump_{row['티커']}"):
                             st.session_state['target_ticker'] = row['티커'] # 종목명 저장
-                            st.session_state['active_menu'] = "🔍 종목 진단" # 메뉴 이동 강제
-                            st.rerun() # 앱 강제 새로고침
+                            st.session_state['nav_choice'] = "🔍 종목 진단" # 메뉴 이동 강제
+                            st.rerun() # 앱을 다시 실행하여 첫 페이지로 보냄
                         st.markdown("---")
 
 # =========================================================
-# 5. 수익화 사이드바
+# 5. 수익화 사이드바 (최종 수정 완료)
 # =========================================================
 with st.sidebar:
     st.markdown("---")
@@ -211,9 +219,10 @@ with st.sidebar:
         qr_file = "kakao_qr.png.jpg"
         if os.path.exists(qr_file): # NameError 해결
             st.image(qr_file, use_container_width=True)
-            st.caption("예금주: 최*환")
+            st.caption("예금주: 최주환")
+        else:
+            st.error("QR 이미지가 없습니다.")
     st.markdown("---")
-    # 문구 및 책 정보 수정
+    # 문구 수정 완료
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
-    st.caption("※ 파트너스 활동으로 수수료가 발생할 수 있음")
