@@ -163,39 +163,83 @@ elif choice == "📋 S&P 500 리스트":
     if sp500_df is not None:
         st.dataframe(sp500_df[['Symbol', 'Name', 'Sector']], use_container_width=True)
 
-# --- [메뉴 3] 업종별 보물찾기 ---
+# --- [3] 업종별 보물찾기 (수정 및 보강 버전) ---
 elif choice == "💎 업종별 보물찾기":
-    st.subheader("💎 업종별 저평가 우량주 발굴")
+    st.subheader("💎 업종별 저평가 우량주 검색")
+    st.markdown("선택한 업종의 종목들을 하나씩 분석하여 **워렌 버핏 점수**가 높은 순으로 보여줍니다.")
+
     if sp500_df is not None:
+        # 업종 리스트 추출 및 한글 매핑 준비
         sectors = sorted(sp500_df['Sector'].unique())
         sector_options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors]
-        selected = st.selectbox("업종 선택", sector_options)
-        real_sector = selected.split(' (')[0]
         
-        if st.button(f"🚀 {real_sector} 분석 시작"):
-            targets = sp500_df[sp500_df['Sector'] == real_sector].head(30)
-            results = []
-            bar = st.progress(0)
-            for i, row in enumerate(targets.itertuples()):
-                d, _ = get_stock_info(row.Symbol)
-                if d:
-                    s, _, m_text, _ = calculate_us_score(d)
-                    results.append({'티커': row.Symbol, '종목명': d['Name'], '점수': s, '현재가': f"${d['Price']}", '안전마진': m_text})
-                bar.progress((i+1)/len(targets))
+        selected = st.selectbox("탐색할 업종을 선택하세요", sector_options)
+        # 선택된 텍스트에서 영문 업종명만 정확히 추출
+        real_sector = selected.split(' (')[0].strip()
+        
+        if st.button(f"🚀 {real_sector} 전 종목 채점 시작"):
+            # 해당 업종 종목 필터링
+            targets = sp500_df[sp500_df['Sector'] == real_sector]
             
-            if results:
-                df_res = pd.DataFrame(results).sort_values('점수', ascending=False)
-                for row in df_res.head(10).to_dict('records'):
-                    c1, c2, c3, c4 = st.columns([1, 3, 2, 2])
-                    c1.write(f"**{row['티커']}**")
-                    c2.write(row['종목명'])
-                    c3.write(f"**{row['점수']}점**")
-                    # [핵심] 진단하기 버튼 클릭 시 세션 상태 변경 후 리런
-                    if c4.button(f"🔍 진단", key=f"btn_{row['티커']}"):
-                        st.session_state['target_ticker'] = row['티커']
-                        st.session_state['active_tab'] = "🔍 종목 진단" # 강제 메뉴 이동
-                        st.rerun()
-
+            if targets.empty:
+                st.error(f"'{real_sector}' 업종에 해당하는 종목을 찾을 수 없습니다.")
+            else:
+                # 너무 많으면 상위 30개만 (무료 서버 보호용)
+                display_targets = targets.head(30)
+                st.info(f"📍 {real_sector} 업종의 {len(display_targets)}개 종목을 분석합니다.")
+                
+                results = []
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                for i, row in enumerate(display_targets.itertuples()):
+                    ticker = row.Symbol
+                    status_text.text(f"🔍 {ticker} ({i+1}/{len(display_targets)}) 분석 중...")
+                    
+                    # 데이터 가져오기 시도
+                    try:
+                        d, _ = get_stock_info(ticker)
+                        if d:
+                            s, _, m_text, _ = calculate_us_score(d)
+                            results.append({
+                                '티커': ticker,
+                                '종목명': d['Name'],
+                                '점수': s,
+                                '현재가': f"${d['Price']}",
+                                '안전마진': m_text
+                            })
+                    except Exception as e:
+                        # 한 종목 에러 나도 멈추지 않고 계속 진행
+                        continue
+                        
+                    progress_bar.progress((i + 1) / len(display_targets))
+                
+                progress_bar.empty()
+                status_text.empty()
+                
+                if results:
+                    # 결과를 데이터프레임으로 변환 후 점수 순 정렬
+                    df_res = pd.DataFrame(results).sort_values('점수', ascending=False)
+                    
+                    st.success(f"✅ {len(results)}개 종목 분석 완료!")
+                    st.markdown("### 📊 채점 결과 (점수 높은 순)")
+                    
+                    # 결과를 루프로 돌려 버튼과 함께 표시
+                    for row in df_res.to_dict('records'):
+                        with st.container():
+                            c1, c2, c3, c4 = st.columns([1, 3, 2, 2])
+                            c1.write(f"**{row['티커']}**")
+                            c2.write(row['종목명'])
+                            c3.write(f"**{row['점수']}점**")
+                            # 진단하기 버튼 클릭 시 세션 상태 업데이트 후 리런
+                            if c4.button(f"🔍 진단하기", key=f"btn_rank_{row['티커']}"):
+                                st.session_state['target_ticker'] = row['티커']
+                                st.session_state['active_tab'] = "🔍 종목 진단"
+                                st.rerun()
+                            st.markdown("---")
+                else:
+                    st.error("데이터를 가져오는 데 실패했습니다. 잠시 후 다시 시도해주세요.")
+                    
 import os # 맨 위에 이 줄이 반드시 있어야 에러가 안 납니다!
 
 # =========================================================
@@ -238,6 +282,7 @@ with st.sidebar:
     # 2. 쿠팡 파트너스 (사장님 요청 문구 반영)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
 
 
 
