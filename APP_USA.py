@@ -213,7 +213,8 @@ with st.sidebar:
         qr_file = "kakao_qr.png.jpg"
         if os.path.exists(qr_file):
             st.image(qr_file, use_container_width=True)
-            st.caption("예금주: 최주환")
+            st.caption("예금주: 최*환")
     st.markdown("---")
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
+
