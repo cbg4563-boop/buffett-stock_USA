@@ -202,7 +202,7 @@ elif choice == "💎 업종별 보물찾기":
 with st.sidebar:
     st.markdown("---")
     st.header("☕ 후원")
-    my_link = "https://buymeacoffee.com/jh.choi" 
+    my_link = "https://buymeacoffee.com/cbg4563t" 
     st.markdown(f'<a href="{my_link}" target="_blank"> 후원하기 </a>', unsafe_allow_html=True)
     import os
     if os.path.exists("kakao_qr.png.jpg"):
@@ -212,5 +212,6 @@ with st.sidebar:
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
         
+
 
 
