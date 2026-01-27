@@ -196,11 +196,15 @@ elif choice == "💎 업종별 보물찾기":
                         st.session_state['active_tab'] = "🔍 종목 진단" # 강제 메뉴 이동
                         st.rerun()
 
+import os # 맨 위에 이 줄이 반드시 있어야 에러가 안 납니다!
+
 # =========================================================
-# 5. 수익화 사이드바 (동일)
+# 💸 [수익화 파트] 사이드바 (최종_에러수정_완성본)
 # =========================================================
 with st.sidebar:
     st.markdown("---")
+    
+    # 1. 개발자 후원 (카드 vs 카카오)
     st.header("☕ 개발자 후원")
     st.caption("서버비 유지에 큰 힘이 됩니다! 🙇‍♂️")
     
@@ -208,10 +212,9 @@ with st.sidebar:
     
     with tab_card:
         st.write(" ")
-        my_link = "https://buymeacoffee.com/jh.choi" 
-        # [복구] 노란색 이미지 버튼 다시 적용
+        my_coffee_link = "https://buymeacoffee.com/jh.choi" 
         st.markdown(f"""
-        <a href="{my_link}" target="_blank">
+        <a href="{my_coffee_link}" target="_blank">
             <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 100% !important;" >
         </a>
         """, unsafe_allow_html=True)
@@ -219,16 +222,22 @@ with st.sidebar:
 
     with tab_kakao:
         st.write(" ")
-        if os.path.exists("kakao_qr.png.jpg"):
-            st.image("kakao_qr.png.jpg", caption="카메라 스캔 → 바로 송금", use_container_width=True)
+        # 사장님이 말씀하신 파일명 'kakao_qr.png.jpg'로 정확히 수정했습니다.
+        qr_filename = "kakao_qr.png.jpg" 
+        
+        if os.path.exists(qr_filename):
+            st.image(qr_filename, caption="카메라 스캔 → 바로 송금", use_container_width=True)
             st.caption("예금주: 최*환") 
         else:
-            st.error("QR 이미지를 업로드해주세요.")
-        
-    # 2. 쿠팡 파트너스 (책 추천)
+            # 파일이 없을 경우 사장님께 알려주는 메시지
+            st.error(f"'{qr_filename}' 파일을 찾을 수 없습니다.")
+            st.caption("팁: 깃허브에 올린 파일명과 대소문자까지 똑같아야 합니다!")
+
+    st.markdown("---")
+
+    # 2. 쿠팡 파트너스 (사장님 요청 문구 반영)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
-        
 
 
 
