@@ -207,3 +207,59 @@ elif choice == "🏆 분야별 TOP 5 랭킹":
             # 해당 업종 전 종목 가져오기
             targets = sp500_df[sp500_df['Sector'] == pure_sector]
             total = len(targets)
+            
+            results = []
+            p_bar = st.progress(0)
+            status = st.empty()
+            
+            for i, row in enumerate(targets.itertuples()):
+                # S&P500 리스트에 있는 '정확한 이름'을 사용
+                ticker = row.Symbol
+                name_in_list = row.Name 
+                
+                status.text(f"🔍 ({i+1}/{total}) {name_in_list} 분석 중...")
+                
+                d, _ = get_stock_data(ticker)
+                if d:
+                    s, m_t = calculate_score(d)
+                    results.append({
+                        '티커': ticker,
+                        '종목명': name_in_list, # 리스트에 있는 이름 그대로 사용 (복붙 검색 용이)
+                        '점수': s,
+                        '안전마진': m_t,
+                        '현재가': f"${d['Price']}",
+                        'ROE': f"{d['ROE']}%"
+                    })
+                p_bar.progress((i+1)/total)
+                time.sleep(0.1) # 속도 조절
+            
+            p_bar.empty()
+            status.empty()
+            
+            if results:
+                df_res = pd.DataFrame(results).sort_values('점수', ascending=False).head(5)
+                df_res.reset_index(drop=True, inplace=True)
+                df_res.index = df_res.index + 1
+                st.success(f"✅ 분석 완료!")
+                st.table(df_res)
+            else:
+                st.warning("데이터 수집 실패")
+
+# =========================================================
+# 4. 사이드바
+# =========================================================
+with st.sidebar:
+    st.markdown("---")
+    st.header("☕ 개발자 후원")
+    t1, t2 = st.tabs(["💳 카드/페이", "🟡 카카오송금"])
+    with t1:
+        st.markdown('<a href="https://buymeacoffee.com/jh.choi" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" style="width:100%"></a>', unsafe_allow_html=True)
+    with t2:
+        import os
+        if os.path.exists("kakao_qr.png.jpg"):
+            st.image("kakao_qr.png.jpg", use_container_width=True)
+            st.caption("예금주: 최*환")
+            
+    st.markdown("---")
+    st.info("📚 **워렌 버핏 투자법 완벽 가이드**")
+    st.markdown("[👉 **'워렌 버핏 바이블' 최저가 보기**](https://link.coupang.com/a/dz5HhD)")
