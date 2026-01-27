@@ -201,17 +201,35 @@ elif choice == "💎 업종별 보물찾기":
 # =========================================================
 with st.sidebar:
     st.markdown("---")
-    st.header("☕ 후원")
-    my_link = "https://buymeacoffee.com/cbg4563t" 
-    st.markdown(f'<a href="{my_link}" target="_blank"> 후원하기 </a>', unsafe_allow_html=True)
-    import os
-    if os.path.exists("kakao_qr.png.jpg"):
-        st.image("kakao_qr.png.jpg", caption="카카오 송금")
+    st.header("☕ 개발자 후원")
+    st.caption("서버비 유지에 큰 힘이 됩니다! 🙇‍♂️")
+    
+    tab_card, tab_kakao = st.tabs(["💳 카드/페이", "🟡 카카오송금"])
+    
+    with tab_card:
+        st.write(" ")
+        my_link = "https://buymeacoffee.com/jh.choi" 
+        # [복구] 노란색 이미지 버튼 다시 적용
+        st.markdown(f"""
+        <a href="{my_link}" target="_blank">
+            <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 45px !important;width: 100% !important;" >
+        </a>
+        """, unsafe_allow_html=True)
+        st.caption("해외 결제 / 간편 후원")
+
+    with tab_kakao:
+        st.write(" ")
+        if os.path.exists("kakao_qr.png"):
+            st.image("kakao_qr.png", caption="카메라 스캔 → 바로 송금", use_container_width=True)
+            st.caption("예금주: 최*환") 
+        else:
+            st.error("QR 이미지를 업로드해주세요.")
         
     # 2. 쿠팡 파트너스 (책 추천)
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
         
+
 
 
 
