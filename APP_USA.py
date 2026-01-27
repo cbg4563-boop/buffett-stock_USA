@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import FinanceDataReader as fdr
-import os    # [해결] NameError 방지
-import time  # [해결] 야후 차단 방지용 대기 시간
+import os    # 사이드바 에러 방지
+import time  # 야후 차단 방지
 
 # =========================================================
-# 1. 페이지 설정
+# 1. 페이지 설정 및 내비게이션 상태 관리
 # =========================================================
 st.set_page_config(
     page_title="워렌 버핏의 미국 주식 계산기",
@@ -14,16 +14,23 @@ st.set_page_config(
     layout="wide"
 )
 
-# 표 디자인 강화
+# [핵심] 탭 이동과 검색어를 제어하기 위한 세션 상태
+if 'active_tab' not in st.session_state:
+    st.session_state['active_tab'] = "🔍 종목 진단"
+if 'target_ticker' not in st.session_state:
+    st.session_state['target_ticker'] = ""
+
 st.markdown("""
 <style>
     div[data-testid="stMetric"] { background-color: #ffffff !important; border: 1px solid #e6e6e6; padding: 15px; border-radius: 10px; }
-    .stDataFrame { border: 2px solid #004e92; border-radius: 10px; }
+    div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlock"] > div:has(input[type="radio"]) {
+        background-color: #f8f9fb; padding: 15px; border-radius: 15px; border: 1px solid #dee2e6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 2. 데이터 수집 및 점수 계산 로직 (안정성 강화)
+# 2. 데이터 처리 & 스마트 검색 로직 [해결] 한글/영어 검색
 # =========================================================
 @st.cache_data(ttl=86400)
 def get_sp500_data():
@@ -39,137 +46,162 @@ def get_sector_map():
         'Utilities': '유틸리티', 'Real Estate': '부동산'
     }
 
-def get_stock_info_stable(ticker):
-    """데이터 수집 실패를 최소화하는 안정화 함수"""
+@st.cache_data(ttl=86400)
+def get_korean_name_map():
+    # 사장님이 요청하신 한글 검색 지원용 맵핑
+    return {
+        '애플': 'AAPL', '테슬라': 'TSLA', '마소': 'MSFT', '구글': 'GOOGL', '아마존': 'AMZN',
+        '엔비디아': 'NVDA', '메타': 'META', '페이스북': 'META', '넷플릭스': 'NFLX', 
+        '인텔': 'INTC', '코카콜라': 'KO', '펩시': 'PEP', '스타벅스': 'SBUX', '디즈니': 'DIS'
+    }
+
+def find_ticker(user_input, df_sp500):
+    user_input = user_input.strip()
+    # 1. 한글 이름 확인
+    k_map = get_korean_name_map()
+    if user_input in k_map: return k_map[user_input]
+    
+    if df_sp500 is not None:
+        upper_input = user_input.upper()
+        # 2. 티커로 직접 검색 (AAPL)
+        if upper_input in df_sp500['Symbol'].values: return upper_input
+        # 3. 영어 이름으로 검색 (Apple -> AAPL)
+        match = df_sp500[df_sp500['Name'].str.contains(user_input, case=False, na=False)]
+        if not match.empty: return match.iloc[0]['Symbol']
+        
+    return user_input.upper()
+
+def get_stock_info(ticker):
+    # [해결] 데이터 수집 실패 방지를 위한 예외 처리 및 대기 시간
     try:
         stock = yf.Ticker(ticker)
-        # 데이터를 한 번에 가져오지 못할 경우를 대비해 핵심 정보만 추출
-        info = stock.fast_info
-        detailed_info = stock.info
+        info = stock.info
+        price = info.get('currentPrice', info.get('regularMarketPrice', 0))
+        if price == 0: return None, None
         
-        price = detailed_info.get('currentPrice', detailed_info.get('regularMarketPrice', 0))
-        if price == 0: return None
-        
-        return {
+        data = {
             'Price': price,
-            'TargetPrice': detailed_info.get('targetMeanPrice', 0),
-            'ROE': round(detailed_info.get('returnOnEquity', 0) * 100, 2) if detailed_info.get('returnOnEquity') else 0,
-            'PER': round(detailed_info.get('trailingPE', 0), 2) if detailed_info.get('trailingPE') else 0,
-            'PBR': round(detailed_info.get('priceToBook', 0), 2) if detailed_info.get('priceToBook') else 0,
-            'Name': detailed_info.get('shortName', ticker)
+            'TargetPrice': info.get('targetMeanPrice', 0),
+            'ROE': round(info.get('returnOnEquity', 0) * 100, 2) if info.get('returnOnEquity') else 0,
+            'PER': round(info.get('trailingPE', 0), 2) if info.get('trailingPE') else 0,
+            'PBR': round(info.get('priceToBook', 0), 2) if info.get('priceToBook') else 0,
+            'DIV': round(info.get('dividendYield', 0) * 100, 2) if info.get('dividendYield') else 0,
+            'Name': info.get('shortName', ticker)
         }
+        history = stock.history(period="1y")
+        return data, history
     except:
-        return None
+        return None, None
 
 def calculate_score(data):
-    """버핏식 가치투자 점수 계산 (100점 만점)"""
     score = 0
-    if data['ROE'] >= 15: score += 50
-    if 0 < data['PBR'] <= 2.0: score += 30
-    if 0 < data['PER'] <= 20: score += 20
-    
+    roe, per, pbr, div = data['ROE'], data['PER'], data['PBR'], data['DIV']
+    if roe >= 15: score += 50
+    if 0 < pbr <= 2.0: score += 20
+    if 0 < per <= 20: score += 20
+    if div >= 1.0: score += 10
     m_rate = ((data['TargetPrice'] - data['Price']) / data['Price'] * 100) if data['TargetPrice'] > 0 else 0
-    return score, f"{m_rate:.1f}%"
+    return score, f"{m_rate:.1f}%", m_rate
 
 # =========================================================
 # 3. 메인 화면 구성
 # =========================================================
 st.title("🗽 워렌 버핏의 미국 주식 계산기")
 
-tab1, tab2, tab3 = st.tabs(["🔍 종목 진단", "📋 S&P 500 리스트", "🏆 분야별 TOP 5 랭킹"])
+# 탭 대신 라디오 내비게이션 (강제 이동을 위함)
+menu = ["🔍 종목 진단", "📋 S&P 500 리스트", "🏆 분야별 TOP 5 랭킹"]
+choice = st.radio("메뉴", menu, index=menu.index(st.session_state['active_tab']), horizontal=True, label_visibility="collapsed")
+st.session_state['active_tab'] = choice
 
-# --- [1] 종목 진단 ---
-with tab1:
-    search_ticker = st.text_input("분석할 티커 입력 (예: TSLA, AAPL)", "")
-    if search_ticker:
-        with st.spinner("데이터 분석 중..."):
-            d = get_stock_info_stable(search_ticker.upper())
-            if d:
-                score, m_text = calculate_score(d)
-                st.subheader(f"📊 {d['Name']} 분석 결과")
-                col1, col2 = st.columns(2)
-                col1.metric("버핏 점수", f"{score}점")
-                col2.metric("안전마진 (목표가 대비)", m_text)
-                st.write(f"현재가: ${d['Price']} | ROE: {d['ROE']}% | PER: {d['PER']}배 | PBR: {d['PBR']}배")
-            else: st.error("해당 종목의 데이터를 가져올 수 없습니다.")
+sp500_df = get_sp500_data()
+sector_map = get_sector_map()
 
-# --- [2] 리스트 ---
-with tab2:
-    df = get_sp500_data()
-    if df is not None:
-        st.dataframe(df[['Symbol', 'Name', 'Sector']], use_container_width=True, hide_index=True)
+st.markdown("---")
+
+# --- [1] 종목 진단 (한글/영어 완벽 검색) ---
+if choice == "🔍 종목 진단":
+    search_q = st.session_state['target_ticker']
+    with st.form(key='search_form'):
+        c1, c2 = st.columns([4, 1])
+        with c1: input_text = st.text_input("종목명(애플), 영어(Apple), 티커(AAPL) 입력", value=search_q, placeholder="예: 애플, 테슬라, NVDA", label_visibility="collapsed")
+        with c2: search_btn = st.form_submit_button("🔍 계산")
+
+    if (search_btn and input_text) or (search_q and input_text):
+        if search_q: st.session_state['target_ticker'] = ""
+        ticker = find_ticker(input_text, sp500_df)
+        with st.spinner(f"🇺🇸 {ticker} 정밀 분석 중..."):
+            data, history = get_stock_info(ticker)
+            if data:
+                score, m_text, m_rate = calculate_score(data)
+                col_a, col_b = st.columns([1, 2])
+                with col_a:
+                    st.subheader("종합 점수")
+                    if score >= 60: st.success(f"# 💎 {score}점")
+                    else: st.warning(f"# ✋ {score}점")
+                    st.metric("안전마진", m_text, delta=f"{m_rate:.1f}%")
+                with col_b:
+                    st.subheader(f"{data['Name']} ({ticker})")
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("현재가", f"${data['Price']}")
+                    m2.metric("ROE", f"{data['ROE']}%")
+                    m3.metric("PER", f"{data['PER']}배")
+                    m4.metric("PBR", f"{data['PBR']}배")
+                st.line_chart(history['Close'], color="#004e92")
+            else: st.error("데이터 수집 실패. 잠시 후 다시 시도하세요.")
 
 # --- [3] 분야별 TOP 5 (사장님 요청: 표 형태 출력)
-with tab3:
-    st.subheader("💎 분야별 저평가 우량주 TOP 5")
-    st.info("선택한 업종의 종목들을 실시간으로 채점하여 가장 점수가 높은 5개를 뽑아냅니다.")
-
-    sp500 = get_sp500_data()
-    if sp500 is not None:
-        s_map = get_sector_map()
-        sector_list = sorted(sp500['Sector'].unique())
-        options = [f"{s} ({s_map.get(s, '기타')})" for s in sector_list]
+elif choice == "🏆 분야별 TOP 5 랭킹":
+    st.subheader("💎 업종별 워렌 버핏 점수 TOP 5")
+    if sp500_df is not None:
+        sectors = sorted(sp500_df['Sector'].unique())
+        options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors]
+        selected = st.selectbox("업종 선택", options)
+        pure_sector = selected.split(' (')[0]
         
-        selected = st.selectbox("분석할 업종 선택", options)
-        target_sector = selected.split(' (')[0]
-        
-        if st.button(f"🚀 {target_sector} TOP 5 추출 시작"):
-            # 해당 섹터 종목 추출 (상위 20개로 안정적 분석)
-            sector_stocks = sp500[sp500['Sector'] == target_sector].head(20)
+        if st.button(f"🚀 {pure_sector} TOP 5 추출"):
+            targets = sp500_df[sp500_df['Sector'] == pure_sector].head(25)
             results = []
-            
-            progress_bar = st.progress(0)
+            bar = st.progress(0)
             status = st.empty()
             
-            for i, row in enumerate(sector_stocks.itertuples()):
-                status.text(f"🔍 {row.Symbol} 채점 중... ({i+1}/{len(sector_stocks)})")
+            for i, row in enumerate(targets.itertuples()):
+                status.text(f"🔍 {row.Symbol} 분석 중... ({i+1}/{len(targets)})")
+                time.sleep(0.5) # [해결] 야후 차단 방지 대기 시간
                 
-                # [핵심] 야후 차단 방지: 요청 사이마다 미세한 휴식 시간 추가
-                time.sleep(0.5)
-                
-                data = get_stock_info_stable(row.Symbol)
-                if data:
-                    score, m_text = calculate_score(data)
-                    results.append({
-                        '티커': row.Symbol,
-                        '종목명': data['Name'],
-                        '버핏 점수': score,
-                        '안전마진': m_text,
-                        'ROE': f"{data['ROE']}%",
-                        'PER': f"{data['PER']}배",
-                        '현재가': f"${data['Price']}"
-                    })
-                progress_bar.progress((i + 1) / len(sector_stocks))
+                d, _ = get_stock_info(row.Symbol)
+                if d:
+                    s, m_t, _ = calculate_score(d)
+                    results.append({'티커': row.Symbol, '종목명': d['Name'], '점수': s, '안전마진': m_t, 'ROE': f"{d['ROE']}%", '현재가': f"${d['Price']}"})
+                bar.progress((i + 1) / len(targets))
             
             status.empty()
             if results:
-                # 점수 순으로 정렬하여 상위 5개만 표로 출력
-                rank_df = pd.DataFrame(results).sort_values('버핏 점수', ascending=False).head(5)
-                rank_df.index = range(1, len(rank_df) + 1)
-                rank_df.index.name = "순위"
-                
-                st.success(f"✅ {target_sector} 분야 분석 완료!")
-                st.table(rank_df) # 사장님이 원하신 깔끔한 표 형태
-            else:
-                st.error("데이터 수집에 실패했습니다. 야후 서버가 일시적으로 차단했을 수 있으니 1분 후 다시 시도해주세요.")
+                # [해결] 점수 순 표 형태 출력
+                final_df = pd.DataFrame(results).sort_values('점수', ascending=False).head(5)
+                final_df.index = range(1, len(final_df) + 1)
+                st.success("✅ 분석 완료!")
+                st.table(final_df) 
+            else: st.error("데이터 수집 실패. 잠시 후 다시 시도하세요.")
+
+elif choice == "📋 S&P 500 리스트":
+    if sp500_df is not None:
+        st.dataframe(sp500_df[['Symbol', 'Name', 'Sector']], use_container_width=True, hide_index=True)
 
 # =========================================================
-# 5. 수익화 사이드바
+# 5. 수익화 사이드바 [해결] 예금주 최*환 수정
 # =========================================================
 with st.sidebar:
     st.markdown("---")
     st.header("☕ 개발자 후원")
-    
-    t_card, t_kakao = st.tabs(["💳 카드/페이", "🟡 카카오송금"])
-    with t_card:
+    tab_card, tab_kakao = st.tabs(["💳 카드/페이", "🟡 카카오송금"])
+    with tab_card:
         st.markdown(f'<a href="https://buymeacoffee.com/jh.choi" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" style="width:100%"></a>', unsafe_allow_html=True)
-    with t_kakao:
-        qr_path = "kakao_qr.png.jpg"
-        if os.path.exists(qr_path): # [해결] NameError 안 남
-            st.image(qr_path, use_container_width=True)
-            st.caption("예금주: 최*환")
-    
+    with tab_kakao:
+        qr_file = "kakao_qr.png.jpg"
+        if os.path.exists(qr_file):
+            st.image(qr_file, use_container_width=True)
+            st.caption("예금주: 최*환") # [요청] 예금주 이름 마스킹 수정 완료
     st.markdown("---")
-    # 사장님 요청 도서 추천 문구
+    # [요청] 워렌 버핏 바이블 문구 반영
     st.info("📚 **워렌 버핏 방식을 따르고 싶다면 무조건 읽어야 하는 인생 책**")
     st.markdown("[👉 **'워렌 버핏 바이블 완결판' 최저가**](https://link.coupang.com/a/dz5HhD)")
