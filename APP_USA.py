@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 import FinanceDataReader as fdr
 import time
+import os
 
 # =========================================================
 # 1. 페이지 설정
@@ -47,39 +48,47 @@ def get_sector_map():
 
 def find_ticker_smart(user_input, df_sp500):
     """
-    [핵심 수정] 복사 붙여넣기 완벽 대응
-    사용자가 입력한 값이 리스트에 있는 이름과 똑같으면 바로 티커를 뱉어냅니다.
+    [핵심 수정] 팔란티어 등 한국인이 자주 찾는 종목 대거 추가
     """
     user_input = user_input.strip()
     if not user_input: return ""
     
-    # 1. 한글 별칭 확인
-    k_map = {'애플': 'AAPL', '테슬라': 'TSLA', '마소': 'MSFT', '엔비디아': 'NVDA', '아마존': 'AMZN', '구글': 'GOOGL', '메타': 'META'}
+    # 1. 한글 별칭 확인 (여기에 팔란티어 추가함)
+    k_map = {
+        '애플': 'AAPL', '테슬라': 'TSLA', '마소': 'MSFT', '마이크로소프트': 'MSFT',
+        '엔비디아': 'NVDA', '아마존': 'AMZN', '구글': 'GOOGL', '알파벳': 'GOOGL',
+        '메타': 'META', '페이스북': 'META', '넷플릭스': 'NFLX', 
+        '팔란티어': 'PLTR', '팔랜티어': 'PLTR', # [추가] 사장님 요청
+        '아이온큐': 'IONQ', '유니티': 'U', '로블록스': 'RBLX', '코인베이스': 'COIN',
+        '스타벅스': 'SBUX', '코카콜라': 'KO', '펩시': 'PEP', '코스트코': 'COST',
+        '맥도날드': 'MCD', '디즈니': 'DIS', '나이키': 'NKE',
+        '에이엠디': 'AMD', '암드': 'AMD', '인텔': 'INTC', '퀄컴': 'QCOM',
+        '마이크론': 'MU', '브로드컴': 'AVGO', '어도비': 'ADBE',
+        '버크셔': 'BRK-B', '제이피모건': 'JPM', '비자': 'V', '마스터카드': 'MA',
+        '존슨앤존슨': 'JNJ', '일라이릴리': 'LLY', '화이자': 'PFE'
+    }
+    
     if user_input in k_map: return k_map[user_input]
     
     if df_sp500 is not None:
-        # 대소문자 구분 없이 비교하기 위해 입력값을 소문자로 변환
         input_lower = user_input.lower()
         
-        # 2. 티커(Symbol) 직접 검색 (예: AVY)
-        # Symbol 컬럼에 정확히 일치하는 게 있는지 확인
+        # 2. 티커(Symbol) 직접 검색
         symbol_match = df_sp500[df_sp500['Symbol'].str.lower() == input_lower]
         if not symbol_match.empty:
             return symbol_match.iloc[0]['Symbol']
             
-        # 3. [이게 중요] 회사 이름(Name) 정밀 검색 (복붙 대응)
-        # 사용자가 "Avery Dennison Corporation"을 넣었을 때 정확히 찾기
+        # 3. 회사 이름(Name) 정밀 검색 (복붙 대응)
         name_match = df_sp500[df_sp500['Name'].str.lower() == input_lower]
         if not name_match.empty:
             return name_match.iloc[0]['Symbol']
             
-        # 4. 이름에 포함된 경우 (예: "Avery"만 쳐도 찾기)
-        # regex=False로 설정해서 특수문자 오류 방지
+        # 4. 이름 포함 검색
         contains_match = df_sp500[df_sp500['Name'].str.contains(user_input, case=False, na=False, regex=False)]
         if not contains_match.empty:
             return contains_match.iloc[0]['Symbol']
 
-    # 못 찾으면 입력값 그대로 반환 (야후에 맡김)
+    # 못 찾으면 입력값 그대로 반환
     return user_input.upper()
 
 def get_stock_data(ticker):
@@ -135,7 +144,7 @@ sector_map = get_sector_map()
 st.markdown("---")
 
 # ---------------------------------------------------------
-# [탭 1] 종목 진단 (복붙 검색 해결)
+# [탭 1] 종목 진단 (팔란티어 해결)
 # ---------------------------------------------------------
 if choice == "🔍 종목 진단":
     default_val = st.session_state['search_ticker']
@@ -143,17 +152,17 @@ if choice == "🔍 종목 진단":
     with st.form(key='search_form'):
         c1, c2 = st.columns([4, 1])
         with c1:
-            input_txt = st.text_input("기업명(복붙 가능) 또는 티커 입력", value=default_val, placeholder="예: Avery Dennison Corporation, AAPL")
+            input_txt = st.text_input("기업명(한글/영어) 또는 티커 입력", value=default_val, placeholder="예: 팔란티어, AAPL, Avery Dennison")
         with c2:
             search_btn = st.form_submit_button("🔍 진단")
             
     if (search_btn and input_txt) or (default_val and input_txt):
         if default_val: st.session_state['search_ticker'] = ""
         
-        # [수정된 검색 로직 사용]
+        # [수정] 팔란티어 -> PLTR 변환 성공
         target_ticker = find_ticker_smart(input_txt, sp500_df)
         
-        with st.spinner(f"🇺🇸 '{input_txt}' -> '{target_ticker}' 변환 및 분석 중..."):
+        with st.spinner(f"🇺🇸 '{input_txt}' -> '{target_ticker}' 분석 중..."):
             d, history = get_stock_data(target_ticker)
             
             if d:
@@ -178,7 +187,7 @@ if choice == "🔍 종목 진단":
                     st.line_chart(history['Close'], color="#004e92")
             else:
                 st.error(f"데이터를 찾을 수 없습니다. (입력값: {input_txt} -> 변환시도: {target_ticker})")
-                st.caption("※ 랭킹의 종목명을 정확히 복사했는지 확인해주세요.")
+                st.caption("※ 정확한 티커(예: PLTR)를 입력하거나, 유명한 한글 종목명인지 확인해주세요.")
 
 # ---------------------------------------------------------
 # [탭 2] S&P 500 리스트
@@ -190,21 +199,19 @@ elif choice == "📋 S&P 500 리스트":
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 # ---------------------------------------------------------
-# [탭 3] 분야별 TOP 5 (한글명 + 전수조사)
+# [탭 3] 분야별 TOP 5
 # ---------------------------------------------------------
 elif choice == "🏆 분야별 TOP 5 랭킹":
     st.subheader("🏆 분야별 저평가 우량주 TOP 5")
     
     if sp500_df is not None:
         sectors = sorted(sp500_df['Sector'].unique())
-        # 한글 매핑 적용
         sector_options = [f"{s} ({sector_map.get(s, '기타')})" for s in sectors]
         
         selected_option = st.selectbox("분석할 업종을 선택하세요", sector_options)
         pure_sector = selected_option.split(' (')[0]
         
         if st.button(f"🚀 {pure_sector} 전 종목 분석 시작"):
-            # 해당 업종 전 종목 가져오기
             targets = sp500_df[sp500_df['Sector'] == pure_sector]
             total = len(targets)
             
@@ -213,7 +220,6 @@ elif choice == "🏆 분야별 TOP 5 랭킹":
             status = st.empty()
             
             for i, row in enumerate(targets.itertuples()):
-                # S&P500 리스트에 있는 '정확한 이름'을 사용
                 ticker = row.Symbol
                 name_in_list = row.Name 
                 
@@ -224,14 +230,14 @@ elif choice == "🏆 분야별 TOP 5 랭킹":
                     s, m_t = calculate_score(d)
                     results.append({
                         '티커': ticker,
-                        '종목명': name_in_list, # 리스트에 있는 이름 그대로 사용 (복붙 검색 용이)
+                        '종목명': name_in_list,
                         '점수': s,
                         '안전마진': m_t,
                         '현재가': f"${d['Price']}",
                         'ROE': f"{d['ROE']}%"
                     })
                 p_bar.progress((i+1)/total)
-                time.sleep(0.1) # 속도 조절
+                time.sleep(0.1)
             
             p_bar.empty()
             status.empty()
@@ -255,7 +261,6 @@ with st.sidebar:
     with t1:
         st.markdown('<a href="https://buymeacoffee.com/jh.choi" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" style="width:100%"></a>', unsafe_allow_html=True)
     with t2:
-        import os
         if os.path.exists("kakao_qr.png.jpg"):
             st.image("kakao_qr.png.jpg", use_container_width=True)
             st.caption("예금주: 최*환")
