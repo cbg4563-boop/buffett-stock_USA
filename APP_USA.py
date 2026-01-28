@@ -10,6 +10,75 @@ import os
 # =========================================================
 st.set_page_config(page_title="워렌 버핏 주식매매 기준 계산기", page_icon="🗽", layout="wide")
 
+# [디자인] 앱 스타일 커스텀 (CSS 주입)
+st.markdown("""
+<style>
+    /* 전체 배경 및 폰트 설정 */
+    .stApp {
+        background-color: #F0F2F6; /* 아주 연한 회색 (앱 배경 느낌) */
+    }
+    
+    /* 상단 헤더 숨기기 (깔끔하게) */
+    header {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* 버튼 스타일: 둥글고 앱 버튼처럼 */
+    .stButton > button {
+        width: 100%;
+        border-radius: 20px;
+        background-color: #4CAF50; /* 스타벅스 그린 */
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-weight: bold;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    .stButton > button:hover {
+        background-color: #45a049;
+        transform: scale(1.02);
+    }
+
+    /* 입력창 스타일: 둥글게 */
+    .stTextInput > div > div > input {
+        border-radius: 15px;
+        border: 1px solid #ddd;
+        padding: 10px;
+    }
+
+    /* 메트릭 박스(점수판) 카드 디자인 */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        border: none !important;
+        padding: 20px !important;
+        border-radius: 15px !important;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.05); /* 부드러운 그림자 */
+    }
+    
+    /* 메트릭 라벨 색상 (다크모드 이슈 방지) */
+    div[data-testid="stMetric"] label {
+        color: #555 !important;
+        font-size: 0.9rem !important;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #000 !important;
+        font-weight: 800 !important;
+        font-size: 1.8rem !important;
+    }
+
+    /* 라디오 버튼(메뉴) 카드화 */
+    div.row-widget.stRadio > div {
+        background-color: white;
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+        display: flex;
+        justify_content: space-around;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 스타일 설정 (다크모드 글자 안 보이는 문제 해결)
 st.markdown("""
 <style>
@@ -290,6 +359,7 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 투자법 완벽 가이드**")
     st.markdown("[👉 **'워렌 버핏 바이블' 최저가 보기**](https://link.coupang.com/a/dz5HhD)")
+
 
 
 
