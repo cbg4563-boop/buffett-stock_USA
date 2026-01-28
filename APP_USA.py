@@ -10,12 +10,31 @@ import os
 # =========================================================
 st.set_page_config(page_title="워렌 버핏 주식매매 기준 계산기", page_icon="🗽", layout="wide")
 
-# 스타일 설정
+# 스타일 설정 (다크모드 글자 안 보이는 문제 해결)
 st.markdown("""
 <style>
-    div[data-testid="stMetric"] { background-color: #ffffff !important; border: 1px solid #e6e6e6; padding: 15px; border-radius: 10px; }
+    /* 메트릭 박스(점수판) 디자인 */
+    div[data-testid="stMetric"] { 
+        background-color: #ffffff !important; /* 배경 흰색 고정 */
+        border: 1px solid #e6e6e6; 
+        padding: 15px; 
+        border-radius: 10px; 
+    }
+    
+    /* [핵심 수정] 글자색을 강제로 검은색으로 고정 */
+    div[data-testid="stMetric"] label {
+        color: #31333F !important; /* 라벨(ROE, PER 등) 색상 */
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #000000 !important; /* 숫자 값 색상 */
+    }
+
+    /* 메뉴(라디오 버튼) 디자인 */
     div[data-testid="stHorizontalBlock"] div[data-testid="stVerticalBlock"] > div:has(input[type="radio"]) {
-        background-color: #f8f9fb; padding: 15px; border-radius: 15px; border: 1px solid #dee2e6;
+        background-color: #f8f9fb; 
+        padding: 15px; 
+        border-radius: 15px; 
+        border: 1px solid #dee2e6;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -271,6 +290,7 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 투자법 완벽 가이드**")
     st.markdown("[👉 **'워렌 버핏 바이블' 최저가 보기**](https://link.coupang.com/a/dz5HhD)")
+
 
 
 
