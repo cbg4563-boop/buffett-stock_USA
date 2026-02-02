@@ -79,78 +79,74 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# [디자인] 앱 스타일 커스텀 (모바일 가독성 개선 + 다크모드 글자 증발 해결)
+# [디자인] 모바일 다크모드 강제 차단 및 가독성 최적화
 st.markdown("""
 <style>
-    /* 1. 전체 배경색 및 기본 글자색 강제 고정 */
+    /* 1. [핵심] 브라우저에게 '라이트 모드' 사용을 강제함 (다크모드 무시) */
+    :root {
+        color-scheme: light !important;
+    }
+    
+    /* 2. 전체 배경색 고정 */
     .stApp {
-        background-color: #F0F2F6 !important; /* 밝은 회색 배경 */
+        background-color: #F0F2F6 !important; /* 밝은 회색 */
     }
     
-    /* 2. 모든 제목, 본문, 라벨 글자색을 '진한 회색/검정'으로 강제 */
+    /* 3. 기본 글자색 강제 (검은색) */
     h1, h2, h3, h4, h5, h6, p, li, span, div, label {
-        color: #31333F !important; /* 가독성 좋은 진한 회색 */
-    }
-    
-    /* 3. 버튼 스타일 (스타벅스 그린) - 버튼 글씨는 흰색 유지 */
-    .stButton > button {
-        width: 100%;
-        border-radius: 20px;
-        background-color: #4CAF50 !important;
-        color: white !important; /* 버튼 글씨는 흰색 */
-        border: none;
-        padding: 10px 20px;
-        font-weight: bold;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-    }
-    .stButton > button:hover {
-        background-color: #45a049 !important;
-    }
-    .stButton > button p {
-        color: white !important; /* 버튼 안의 텍스트도 흰색 강제 */
-    }
-
-    /* 4. 메트릭 박스(점수판) 디자인 */
-    div[data-testid="stMetric"] {
-        background-color: #ffffff !important;
-        border: none !important;
-        padding: 20px !important;
-        border-radius: 15px !important;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
-    }
-    /* 점수 숫자 (검은색) */
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #000000 !important;
-        font-weight: 800 !important;
-        font-size: 1.8rem !important;
-    }
-    /* 항목 이름 (진한 회색) */
-    div[data-testid="stMetric"] label {
-        color: #555555 !important;
-    }
-
-    /* 5. 메뉴(라디오 버튼) 박스 디자인 */
-    div.row-widget.stRadio > div {
-        background-color: white !important;
-        padding: 15px;
-        border-radius: 15px;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
-    }
-    /* 라디오 버튼 선택된 텍스트 색상도 강제 */
-    .stRadio label p {
         color: #31333F !important;
     }
+    
+    /* 4. [문제 해결] 드롭다운 메뉴(Selectbox) 스타일 강제 수정 */
+    /* 선택된 값이 보이는 박스 */
+    div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #e6e6e6 !important;
+    }
+    /* 클릭했을 때 열리는 리스트 창 (검은 배경 나오는 것 방지) */
+    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
+        background-color: #ffffff !important;
+    }
+    /* 리스트 내부의 옵션 글자색 */
+    li[role="option"] {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    /* 옵션에 마우스 올리거나 선택했을 때 */
+    li[role="option"][aria-selected="true"] {
+        background-color: #E6F3FF !important; /* 연한 파란색 */
+    }
 
-    /* 6. 입력창 스타일 */
+    /* 5. 입력창(Text Input) 스타일 */
     .stTextInput > div > div > input {
-        border-radius: 15px;
-        border: 1px solid #ddd;
-        padding: 10px;
-        color: #000000 !important; /* 입력 글씨 검은색 */
-        background-color: #ffffff !important; /* 입력창 배경 흰색 */
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+
+    /* 6. 버튼 스타일 (초록색 유지) */
+    .stButton > button {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border: none;
+        border-radius: 20px;
+    }
+    .stButton > button p {
+        color: white !important; /* 버튼 글씨는 흰색 */
+    }
+
+    /* 7. 메트릭 박스(점수판) */
+    div[data-testid="stMetric"] {
+        background-color: #ffffff !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+    }
+    div[data-testid="stMetricValue"] {
+        color: #000000 !important; /* 점수 숫자 검은색 */
     }
     
-    /* 7. 상단 헤더 숨기기 */
+    /* 헤더 숨김 */
     header {visibility: hidden;}
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -408,6 +404,7 @@ with st.sidebar:
     st.markdown("---")
     st.info("📚 **워렌 버핏 투자법 완벽 가이드**")
     st.markdown("[👉 **'워렌 버핏 바이블' 최저가 보기**](https://link.coupang.com/a/dz5HhD)")
+
 
 
 
